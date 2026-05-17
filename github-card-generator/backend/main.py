@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
 
-from agent import github_card_agent
+from mcp_server import scrape_github, analyze_profile, generate_card_html, save_card
 
 app = FastAPI(title="GitHub Dev Card Generator API")
 
@@ -36,32 +36,22 @@ class GenerateRequest(BaseModel):
 @app.post("/generate")
 async def generate_card(request: GenerateRequest):
     try:
-        # Call agent
-        result = github_card_agent(request.username)
-
-        # Create HTML card
-        card_html = f"""
-        <html>
-        <head>
-            <title>{request.username} Card</title>
-        </head>
-        <body style="font-family: Arial; text-align: center;">
-            <h1>GitHub Card 🚀</h1>
-            <h2>{request.username}</h2>
-            <p>{result['message']}</p>
-        </body>
-        </html>
-        """
-
-        # Save file
-        card_path = f"static/cards/{request.username}.html"
-        with open(card_path, "w", encoding="utf-8") as f:
-            f.write(card_html)
+        # 1. Scrape GitHub data
+        github_data = await scrape_github(request.username)
+        
+        # 2. Analyze profile
+        analysis = await analyze_profile(github_data)
+        
+        # 3. Generate HTML
+        card_html = await generate_card_html(request.username, github_data, analysis)
+        
+        # 4. Save to static
+        card_url = await save_card(request.username, card_html)
 
         return {
             "status": "success",
             "username": request.username,
-            "card_url": f"/static/cards/{request.username}.html",
+            "card_url": card_url,
             "card_html": card_html
         }
 
