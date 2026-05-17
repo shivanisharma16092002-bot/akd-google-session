@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 mcp
-#google-akd
+google-generativeai
 pydantic
 httpx
 python-dotenv

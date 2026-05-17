@@ -5,15 +5,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import uvicorn
+from dotenv import load_dotenv
+load_dotenv()
 
 from mcp_server import scrape_github, analyze_profile, generate_card_html, save_card
 
 app = FastAPI(title="GitHub Dev Card Generator API")
 
-# Home route
+# Serve frontend
 @app.get("/")
 def home():
-    return {"message": "Backend running 🚀"}
+    index_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "GitHub Dev Card Generator API 🚀"}
 
 # Enable CORS
 app.add_middleware(
