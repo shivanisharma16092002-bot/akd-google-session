@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+mcp
+#google-akd
+pydantic
+httpx
+python-dotenv
