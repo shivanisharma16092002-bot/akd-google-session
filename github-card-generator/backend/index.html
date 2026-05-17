@@ -175,7 +175,7 @@
                     if (result.status === "success") {
                         setData(result);
                     } else {
-                        setError(result.message || "Something went wrong.");
+                        setError(result.detail || result.message || "Something went wrong.");
                     }
                 } catch (err) {
                     setError("Failed to generate card. Please check the username and try again.");

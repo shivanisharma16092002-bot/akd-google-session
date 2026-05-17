@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-mcp
 google-genai
 pydantic
 httpx
