@@ -1,7 +1,7 @@
 import os
 import json
 import httpx
-import google.generativeai as genai
+from google import genai
 from mcp.server.fastmcp import FastMCP
 from typing import List, Dict
 from pathlib import Path
@@ -9,24 +9,29 @@ from pathlib import Path
 # Create an MCP server
 mcp = FastMCP("GitHubDevCard")
 
-# Configure Gemini
+# Configure Gemini client
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
+gemini_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 
 @mcp.tool()
 async def scrape_github(username: str) -> dict:
     """Fetch GitHub stats and top repos for a given username."""
+    headers = {}
+    github_token = os.getenv("GITHUB_TOKEN")
+    if github_token:
+        headers["Authorization"] = f"token {github_token}"
+
     async with httpx.AsyncClient() as client:
         # Fetch user profile
         user_url = f"https://api.github.com/users/{username}"
-        user_res = await client.get(user_url)
+        user_res = await client.get(user_url, headers=headers)
         user_res.raise_for_status()
         user_data = user_res.json()
 
         # Fetch repos
         repos_url = f"https://api.github.com/users/{username}/repos?sort=stars&per_page=30"
-        repos_res = await client.get(repos_url)
+        repos_res = await client.get(repos_url, headers=headers)
         repos_res.raise_for_status()
         repos_data = repos_res.json()
 
@@ -62,24 +67,40 @@ async def scrape_github(username: str) -> dict:
 @mcp.tool()
 async def analyze_profile(github_data: dict) -> dict:
     """Analyze GitHub data using Gemini to determine developer vibe and theme."""
-    model = genai.GenerativeModel("gemini-1.5-flash") # Using flash for speed/cost
+    if not gemini_client:
+        return {
+            "developer_vibe": "A passionate developer",
+            "top_skills": github_data.get("most_used_languages", ["Code"])[:3],
+            "fun_fact": "Loves open source!",
+            "card_theme": "builder"
+        }
+
     prompt = f"""
     Analyze this GitHub profile and return a JSON object.
     Profile: {json.dumps(github_data)}
 
-    Return exactly this JSON structure:
+    Return ONLY valid JSON with exactly this structure (no markdown, no code blocks):
     {{
         "developer_vibe": "one sentence personality description",
         "top_skills": ["skill1", "skill2", "skill3"],
         "fun_fact": "something clever inferred from repos",
-        "card_theme": "hacker" | "builder" | "researcher" | "designer" | "open-source-hero"
+        "card_theme": "hacker"
     }}
+    card_theme must be one of: hacker, builder, researcher, designer, open-source-hero
     """
-    response = model.generate_content(prompt)
-    # Extract JSON from response (handling potential markdown blocks)
+    
+    response = gemini_client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=prompt
+    )
+    
     text = response.text.strip()
+    # Strip markdown code blocks if present
     if "```json" in text:
         text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+    
     return json.loads(text)
 
 @mcp.tool()
