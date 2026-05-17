@@ -242,7 +242,8 @@
             };
 
             const generateCard = async () => {
-                if (!username) return;
+                const trimmedUsername = username.trim();
+                if (!trimmedUsername) return;
                 setLoading(true);
                 setError("");
                 setData(null);
@@ -251,7 +252,7 @@
                     const response = await fetch('/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username })
+                        body: JSON.stringify({ username: trimmedUsername })
                     });
                     const result = await response.json();
                     

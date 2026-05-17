@@ -41,21 +41,22 @@ class GenerateRequest(BaseModel):
 @app.post("/generate")
 async def generate_card(request: GenerateRequest):
     try:
+        username = request.username.strip()
         # 1. Scrape GitHub data
-        github_data = await scrape_github(request.username)
+        github_data = await scrape_github(username)
         
         # 2. Analyze profile
         analysis = await analyze_profile(github_data)
         
         # 3. Generate HTML
-        card_html = await generate_card_html(request.username, github_data, analysis)
+        card_html = await generate_card_html(username, github_data, analysis)
         
         # 4. Save to static
-        card_url = await save_card(request.username, card_html)
+        card_url = await save_card(username, card_html)
 
         return {
             "status": "success",
-            "username": request.username,
+            "username": username,
             "card_url": card_url,
             "card_html": card_html
         }
@@ -66,6 +67,7 @@ async def generate_card(request: GenerateRequest):
 # Get card
 @app.get("/card/{username}")
 async def get_card(username: str):
+    username = username.strip()
     path = f"static/cards/{username}.html"
     if os.path.exists(path):
         return FileResponse(path)
