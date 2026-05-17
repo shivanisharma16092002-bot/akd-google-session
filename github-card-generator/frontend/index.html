@@ -165,7 +165,7 @@
                 setData(null);
                 
                 try {
-                    const response = await fetch('http://localhost:8080/generate', {
+                    const response = await fetch('http://localhost:8000/generate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ username })
@@ -178,7 +178,7 @@
                         setError(result.message || "Something went wrong.");
                     }
                 } catch (err) {
-                    setError("Failed to connect to backend. Is it running on port 8080?");
+                    setError("Failed to connect to backend. Is it running on port 8000?");
                 }
                 setLoading(false);
             };
